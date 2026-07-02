@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - AVTAR</title>
+    <link rel="stylesheet" href="../frontend/css/style.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div style="text-align:center;font-size:40px;margin-bottom:10px;">👑</div>
+            <h2>Admin Login</h2>
+            <form id="adminLoginForm">
+                <div class="form-group">
+                    <input type="email" id="adminEmail" placeholder="Admin Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="adminPassword" placeholder="Password" required>
+                </div>
+                <button type="submit" class="btn-primary">Login</button>
+                <div id="adminMessage" class="auth-message"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('adminLoginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+            const msg = document.getElementById('adminMessage');
+
+            try {
+                const response = await fetch('/api/admin/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('adminToken', data.token);
+                    localStorage.setItem('adminData', JSON.stringify(data.admin));
+                    msg.className = 'auth-message success';
+                    msg.textContent = '✅ Login successful! Redirecting...';
+                    setTimeout(() => window.location.href = '/admin-dashboard', 1000);
+                } else {
+                    msg.className = 'auth-message error';
+                    msg.textContent = '❌ ' + data.message;
+                }
+            } catch (error) {
+                msg.className = 'auth-message error';
+                msg.textContent = '❌ Login failed. Please try again.';
+            }
+        });
+    </script>
+</body>
+</html>
