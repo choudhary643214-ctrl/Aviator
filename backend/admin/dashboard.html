@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - AVTAR</title>
+    <link rel="stylesheet" href="../frontend/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">👑 AVTAR Admin</div>
+        <div class="nav-links">
+            <a href="/admin-dashboard" class="btn-login" style="background:#667eea;color:#fff;">Dashboard</a>
+            <a href="#" onclick="logout()" class="btn-signup">Logout</a>
+        </div>
+    </nav>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <h1>📊 Admin Dashboard</h1>
+            <p>Welcome, <span id="adminName">Admin</span>!</p>
+        </div>
+
+        <div class="dashboard-stats" id="statsGrid">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div>
+                    <h3 id="totalUsers">0</h3>
+                    <p>Total Users</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🎮</div>
+                <div>
+                    <h3 id="totalGames">0</h3>
+                    <p>Total Games</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div>
+                    <h3 id="totalRevenue">₹0</h3>
+                    <p>Total Revenue</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🟢</div>
+                <div>
+                    <h3 id="onlineUsers">0</h3>
+                    <p>Online Users</p>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:30px;">
+            <h3 style="color:#8892b0;margin-bottom:15px;">📋 Quick Actions</h3>
+            <div class="dashboard-actions">
+                <a href="#" onclick="fetchStats()" class="btn-primary">🔄 Refresh</a>
+                <a href="/" class="btn-secondary">🏠 Home</a>
+            </div>
+        </div>
+
+        <div style="margin-top:30px;">
+            <h3 style="color:#8892b0;margin-bottom:15px;">📜 Recent Games</h3>
+            <div style="background:rgba(255,255,255,0.04);border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,0.06);">
+                <div id="recentGames" style="color:#8892b0;">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===== AUTH =====
+        const token = localStorage.getItem('adminToken');
+        if (!token) window.location.href = '/admin-login';
+
+        const admin = JSON.parse(localStorage.getItem('adminData') || '{}');
+        document.getElementById('adminName').textContent = admin.fullName || 'Admin';
+
+        // ===== LOGOUT =====
+        function logout() {
+            localStorage.removeItem('adminToken');
+            localStorage.removeItem('adminData');
+            window.location.href = '/admin-login';
+        }
+
+        // ===== FETCH STATS =====
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/admin/dashboard/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('totalUsers').textContent = data.stats.totalUsers;
+                    document.getElementById('totalGames').textContent = data.stats.totalGames;
+                    document.getElementById('totalRevenue').textContent = '₹' + data.stats.totalRevenue;
+                    document.getElementById('onlineUsers').textContent = data.stats.onlineUsers;
+                }
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+
+        // ===== FETCH RECENT GAMES =====
+        async function fetchRecentGames() {
+            try {
+                const response = await fetch('/api/admin/games?limit=5', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                const container = document.getElementById('recentGames');
+                if (data.success && data.games.length > 0) {
+                    container.innerHTML = data.games.map(game => `
+                        <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05);color:#c8d0e8;">
+                            <span>${game.userId?.username || 'Unknown'}</span>
+                            <span>₹${game.betAmount}</span>
+                            <span>${game.multiplier.toFixed(2)}x</span>
+                            <span style="color:${game.result === 'win' ? '#34d399' : '#f87171'}">${game.result.toUpperCase()}</span>
+                            <span style="color:#8892b0;font-size:12px;">${new Date(game.createdAt).toLocaleString()}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color:#8892b0;">No games found</p>';
+                }
+            } catch (error) {
+                console.error('Error fetching recent games:', error);
+            }
+        }
+
+        // ===== INIT =====
+        fetchStats();
+        fetchRecentGames();
+        setInterval(fetchStats, 30000);
+    </script>
+</body>
+</html>
