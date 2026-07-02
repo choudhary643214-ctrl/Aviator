@@ -33,14 +33,48 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ===== STATIC FILES (FIXED) =====
+// ===== STATIC FILES =====
 app.use(express.static(path.join(__dirname, '../frontend')));
-app.use('/admin', express.static(path.join(__dirname, 'admin'))); // ✅ Fixed
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
 
-// ===== DATABASE =====
+// ===== DATABASE CONNECTION =====
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('✅ MongoDB Connected Successfully'))
     .catch(err => console.log('❌ MongoDB Connection Error:', err.message));
+
+// ============================================================
+// ===== AUTO-CREATE ADMIN ON SERVER START (FIX) =====
+// ============================================================
+const Admin = require('./models/Admin');
+
+mongoose.connection.once('open', async () => {
+    try {
+        const adminEmail = process.env.ADMIN_EMAIL || 'admin@avatar.com';
+        const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123';
+
+        const adminExists = await Admin.findOne({ email: adminEmail });
+
+        if (!adminExists) {
+            const admin = new Admin({
+                username: 'admin',
+                email: adminEmail,
+                password: adminPassword,
+                fullName: 'Super Admin',
+                role: 'super_admin',
+                permissions: ['view_dashboard', 'view_users', 'manage_games', 'manage_admins']
+            });
+            await admin.save();
+            console.log('✅ Admin auto-created successfully!');
+            console.log(`📧 Email: ${adminEmail}`);
+            console.log(`🔑 Password: ${adminPassword}`);
+        } else {
+            console.log('✅ Admin already exists in database');
+        }
+    } catch (err) {
+        console.error('❌ Admin creation error:', err.message);
+    }
+});
+// ============================================================
 
 // ===== ROUTES =====
 app.use('/api/auth', require('./routes/auth'));
@@ -69,7 +103,7 @@ app.get('/game', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/game.html'));
 });
 
-// ===== ADMIN ROUTES (FIXED) =====
+// ===== ADMIN ROUTES =====
 app.get('/admin-login', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin/admin-login.html'));
 });
